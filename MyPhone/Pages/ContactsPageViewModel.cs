@@ -39,8 +39,9 @@ namespace GoodTimeStudio.MyPhone.Pages
             {
                 Loading = true;
                 var contacts = await _contactStore.GetAsync();
+                var list = contacts.OrderBy(x => x.FirstName).ToList();
                 Contacts = new ObservableCollection<ContactViewModel>(
-                    contacts.Select(c => new ContactViewModel(c, _loggerContactViewModel)));
+                    list.Select(c => new ContactViewModel(c, _loggerContactViewModel)));
             }
             finally
             {

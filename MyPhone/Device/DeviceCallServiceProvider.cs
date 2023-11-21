@@ -1,10 +1,15 @@
 ﻿using GoodTimeStudio.MyPhone.Utilities;
+using InTheHand.Net.Bluetooth;
+using InTheHand.Net.Sockets;
+using InTheHand.Net;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Windows.ApplicationModel.Calls;
 using Windows.Devices.Bluetooth;
@@ -67,7 +72,7 @@ namespace GoodTimeStudio.MyPhone
 
         public async Task CallAsync(string phoneNumber)
         {
-            if (_taskInitPhoneLine == null)
+            /*if (_taskInitPhoneLine == null)
             {
                 throw new InvalidOperationException("CallService has not been initialized.");
             }
@@ -78,7 +83,54 @@ namespace GoodTimeStudio.MyPhone
                 throw new OperationCanceledException();
             }
             // TODO: Lookup contacts book for displayName
-            _selectedPhoneLine.Dial(phoneNumber, phoneNumber);
+            _selectedPhoneLine.Dial(phoneNumber, phoneNumber);*/
+
+            if (phoneNumber != null)
+            {
+                Debug.Assert(App.Current.DeviceManager != null);
+                var deviceManager = App.Current.DeviceManager;
+
+
+                var add = deviceManager.CurrentDevice.HostName.ToString().Replace(":", "").Replace("(", "").Replace(")", "");
+                Debug.WriteLine("address is " + add);
+                Debug.WriteLine("address is " + deviceManager.CurrentDevice.HostName);
+
+                BluetoothAddress address = BluetoothAddress.Parse(add); //"14876A84A213"
+                BluetoothClient bluetoothClient = new BluetoothClient();
+                try
+                {
+                    await Task.Run(delegate
+                    {
+                        bluetoothClient.Connect(address, BluetoothService.Handsfree);
+                    });
+                    using NetworkStream stream = bluetoothClient.GetStream();
+                    List<string> cmds = new List<string>
+                        {
+                            "AT+CMER\r",
+                            "AT+CIND=?\r",
+                            "AT+BRSF=\r",
+                            "ATD" + phoneNumber + ";\r"
+                        };
+                    foreach (string cmd in cmds)
+                    {
+                        Debug.WriteLine("sending: " + cmd);
+                        byte[] cmdData = Encoding.ASCII.GetBytes(cmd);
+                        await stream.WriteAsync(cmdData, default(CancellationToken));
+                        await stream.FlushAsync();
+                        byte[] buffer = new byte[1024];
+                        byte[] responseData = buffer.Take(await stream.ReadAsync(buffer, 0, buffer.Length)).ToArray();
+                        string responseText = Encoding.ASCII.GetString(responseData).Trim();
+                        Debug.WriteLine("responseText: " + responseText);
+                    }
+                }
+                finally
+                {
+                    if (bluetoothClient != null)
+                    {
+                        ((IDisposable)bluetoothClient).Dispose();
+                    }
+                }
+            }
         }
 
         public async Task<PhoneLine?> GetSelectedPhoneLineAsync()
