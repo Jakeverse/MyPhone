@@ -13,6 +13,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Windows.ApplicationModel.Calls;
 using Windows.Devices.Bluetooth;
+using ColorCode.Compilation.Languages;
 
 namespace GoodTimeStudio.MyPhone
 {
@@ -70,7 +71,58 @@ namespace GoodTimeStudio.MyPhone
             base.OnDisconnected();
         }
 
-        public async Task CallAsync(string phoneNumber)
+        public async Task MessageAsync(string phoneNumber)
+        {
+            if(phoneNumber != null)
+            {
+                Debug.WriteLine($"Message to {phoneNumber}");
+                Debug.Assert(App.Current.DeviceManager != null);
+                var deviceManager = App.Current.DeviceManager;
+                var add = deviceManager.CurrentDevice.HostName.ToString().Replace(":", "").Replace("(", "").Replace(")", "");
+                BluetoothAddress address = BluetoothAddress.Parse(add); //"14876A84A213"
+                BluetoothClient bluetoothClient = new BluetoothClient();
+                try
+                {
+                    await Task.Run(delegate
+                    {
+                        bluetoothClient.Connect(address, BluetoothService.Handsfree);
+                    });
+                    using NetworkStream stream = bluetoothClient.GetStream();
+                     List<string> cmds = new List<string>
+                    {
+                            "ATE\r",
+                            "AT\r",
+                            "AT+CMGF=1\r",
+                            "AT+CMGS=\"" + phoneNumber + "\"\r",
+                            "SMS over Bluetooth\n",
+                            $"{26}"
+                    };
+                        foreach (string cmd in cmds)
+                        {
+                            Debug.WriteLine("sending: " + cmd);
+                            byte[] cmdData = Encoding.ASCII.GetBytes(cmd);
+                            await stream.WriteAsync(cmdData, default(CancellationToken));
+                            await stream.FlushAsync();
+                            byte[] buffer = new byte[1024];
+                            byte[] responseData = buffer.Take(await stream.ReadAsync(buffer, 0, buffer.Length)).ToArray();
+                            string responseText = Encoding.ASCII.GetString(responseData).Trim();
+                            Debug.WriteLine("responseText: " + responseText);
+                        }
+                    
+                    
+                }
+                finally
+                {
+                    if (bluetoothClient != null)
+                    {
+                        ((IDisposable)bluetoothClient).Dispose();
+                    }
+                }
+            }
+        }
+
+
+            public async Task CallAsync(string phoneNumber)
         {
             /*if (_taskInitPhoneLine == null)
             {
@@ -92,9 +144,7 @@ namespace GoodTimeStudio.MyPhone
 
 
                 var add = deviceManager.CurrentDevice.HostName.ToString().Replace(":", "").Replace("(", "").Replace(")", "");
-                Debug.WriteLine("address is " + add);
-                Debug.WriteLine("address is " + deviceManager.CurrentDevice.HostName);
-
+                
                 BluetoothAddress address = BluetoothAddress.Parse(add); //"14876A84A213"
                 BluetoothClient bluetoothClient = new BluetoothClient();
                 try

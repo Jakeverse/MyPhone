@@ -45,7 +45,7 @@ namespace GoodTimeStudio.MyPhone.Models
                         resourceLoader.GetString("Contact_Phone"), 
                         primaryAction: Call,
                         primaryActionTooltip: resourceLoader.GetString("Contact_Call") + phone.Number,
-                        secondaryAction: (i) => { /* TODO: Navigate to message page */ },
+                        secondaryAction: Message,
                         secondaryActionIcon: "\uE8BD",
                         secondaryActionTooltip: resourceLoader.GetString("Contact_SendMessage") + phone.Number));
                 }
@@ -86,6 +86,19 @@ namespace GoodTimeStudio.MyPhone.Models
             if (callService != null)
             {
                 await callService.CallAsync(info.Value);
+            }
+            // else {  }
+            // TODO: notify user when call service is unavailable.
+        }
+
+        public static async void Message(ContactDetialInformation info)
+        {
+            Debug.Assert(App.Current.DeviceManager != null);
+            var callService = App.Current.DeviceManager.CallService;
+
+            if (callService != null)
+            {
+                await callService.MessageAsync(info.Value);
             }
             // else {  }
             // TODO: notify user when call service is unavailable.
