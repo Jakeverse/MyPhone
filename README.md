@@ -64,7 +64,7 @@ Actually, I did try to implement HFP stack before but eventually gave up because
 ### Build
 
 1. Clone repo
-   `git clone https://github.com/BestOwl/MyPhone.git`
+   `git clone https://github.com/abusaadp/MyPhone.git`
 2. Open `MyPhone.sln` with Visual Studio
 3. Set `MyPhone` as startup project
 4. Run `MyPhone (Package)`
